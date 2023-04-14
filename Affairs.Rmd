@@ -1,0 +1,293 @@
+---
+title: "Infidelidades"
+output: html_document
+
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+# Codigo ------------------------------------------------------------------
+# Librerias 
+library(AER)
+library(tidyverse)
+library(scales)
+library(kableExtra)
+
+
+
+
+#Colors 
+
+fill_graph <- '#569DAA'
+geom_text <- '#577D86'
+title_text <- '#577D86'
+subtitle_text <- '#87CBB9'
+caption_text <- '#87CBB9'
+background_fill <- '#FCFFE7'
+fiel <- '#577D86'
+infiel <- '#87CBB9'
+
+
+# Datos
+
+data("Affairs")
+
+Affairs$affairs_f <- ifelse(Affairs$affairs>0, 
+                          "Infiel","No infiel")
+Affairs$affairs_n <- ifelse(Affairs$affairs>0, 
+                            1,0)
+
+Affairs$yearsmarried <- as.integer(Affairs$yearsmarried)
+
+
+
+Affairs$gender <- factor(Affairs$gender, 
+                         levels = c('female','male'),
+                         labels = c('Mujeres','Hombres'))
+
+
+Affairs$Clasificacion <- factor(Affairs$affairs, 
+                                levels = c(0,1,2,3,4,5,6,7,8,9,10,11,12),
+                                labels = c('Nunca', 
+                                           '1 vez', '2 veces','3 veces',
+                                           '4 veces','5 veces', '6 veces',
+                                           '7 veces', '8 veces', '9 veces',
+                                           '10 veces', '11 veces', '12 veces'))
+
+caption.g1 <- 'Data Scientis: luiselopezl12@gmail.com | Web Page: https:/bento.me/luisdata'
+theme_text <- theme(
+    plot.title = element_text(family = 'Helvatica', 
+                              face = 'bold', size = (15), 
+                              color =title_text),
+    plot.subtitle = element_text(family = 'Helvatica', 
+                                 color = subtitle_text,
+                                 face = 'bold', size = (8.5)), 
+    plot.caption = element_text(family = 'Helvatica', color = caption_text,
+                                face = 'bold', size = (7)), 
+    panel.background = element_rect(fill = background_fill, color = 'white'),
+    panel.grid.minor = element_line(color = background_fill, size = 0.1),
+    legend.position = 'top')
+
+
+modelo <- glm(affairs_n ~age + yearsmarried + religiousness 
+                + rating,
+               data=Affairs, family=binomial())
+
+
+```
+
+
+Los datos pertenecen a *Wooldridge Source: R.C. Fair (1978), “A Theory of Extramarital Affairs,” Journal of Political Economy 86, 45-61, 1978.* Los información fue recolectada con el paquete de R llamado **AER**. El propósito es hacer un informe breve de los datos y una regresión que nos ayude a calcular la probabilidad de que una persona sea infiel dadas ciertas características.  
+
+¿Necesitas comunicarte? -> luiselopezl12@gmail.com 
+
+Visita mi página web -> [Click aquí](bento.me/luisdata)
+
+
+### Descripción
+
+Para comenzar el análisis, se visualiza una gráfica de barras con la cantidad de veces que una persona ha sido infiel en el eje 'x', mientras en el eje 'y' se gráfica el número de entrevistados que tienen esa característica, por ejemplo, **hay 34 personas que confesaron ser infieles una ocasión**, mientras 451 nunca lo an sido. 
+
+```{r grap1, echo=F, fig.align='center', fig.width=8, fig.height=4}
+title.g1 <- '¿Cuantas veces una persona ha sido infiel? '
+subtitle.g1 <- 'Cantidad de entrevistados clasificados según el número de infidelidades'
+
+
+Affairs %>%
+  group_by(Clasificacion) %>%
+  summarise(Infidelidades = n()) %>%
+  ggplot(aes(Clasificacion, Infidelidades))+
+  geom_bar(stat='identity',fill='#569DAA') +  
+  geom_text(aes(label=Infidelidades), size =3, 
+            color = 'black', vjust = - 0.3) + xlab('')+ylab('')+
+  labs(title= title.g1,
+       subtitle = subtitle.g1, 
+       caption = caption.g1)  + theme_text
+```
+
+
+### Infidelidad por género
+
+En la siguiente gráfica se tiene una división por confesión de al menos una infidelidad y el porcentaje para hombres y mujeres. Se puede observar como 77% de las mujeres confesaron no tener una infidelidad comparado al 73% de los hombres.El porcentaje restante en ambos segmento declara no haber tenido una infidelidad.  
+
+
+
+```{r data , echo= F, warning=F, message=F, fig.align='center', fig.width=8, fig.height=4}
+title.g2 <- '¿Quienes son más infieles?'
+subtitle.g2 <- 'Porcentaje de hombres y mujeres que confesaron ser infieles'
+
+Affairs %>%
+  group_by(gender, affairs_f) %>%
+  summarise(personas = n()) %>%
+  mutate(porcentaje = round(personas / sum(personas),2)) %>%
+  ggplot(aes( y= porcentaje, x = affairs_f))+
+  geom_bar(stat='identity', fill = fill_graph)+xlab('')+ylab('')+
+  geom_text(aes(label=paste0(porcentaje*100,'%')),size = 3, vjust=2, color = 'white')+
+  scale_y_continuous(labels=percent)+
+   scale_fill_manual(values=c(infiel,fiel),
+                    name = '')+
+  labs(title=title.g2, subtitle =  subtitle.g2, caption = caption.g1)+
+  facet_wrap(~gender)+
+  theme_text 
+```
+
+
+
+### Infidelidad por edad
+
+La siguiente gráfica muestra en el eje 'x' la edad de las personas entrevistadas y en el eje 'y' el porcentaje de respuesta a si fueron infieles. Hay algunas diferencias en las edades, sin embargo, los segmentos de edad con más infidelidades son 17, 32 y 47 años. Al parecer, en el último segmento de edad (57 años) hay una menor proporción de infidelidades
+
+
+```{r edad, echo =F, warning=F, message=F, fig.align='center', fig.width=8, fig.height=4}
+
+title.g3 <- 'Confesión de infidelidad por edad'
+subtitle.g3 <- 'Porcentaje de personas que confesaron ser infiel según edad'
+Affairs %>%
+  group_by(age,affairs_f) %>%
+  summarise(personas = n()) %>%
+  mutate(age=factor(age), 
+         porcentaje = round(personas/sum(personas),2)) %>%
+  ggplot(aes(x=age, y = porcentaje, fill = affairs_f))+
+  geom_bar(stat='identity')+
+  geom_text(aes(label = paste0(porcentaje*100,'%')),color="white", 
+            size = 3, hjust = 0.5, vjust = 0.5, 
+            position = position_stack(vjust=0.5))+
+  labs(title = title.g3, subtitle = subtitle.g3, caption = caption.g1)+
+  scale_y_continuous(labels=percent)+
+  scale_fill_manual(values=c(infiel,fiel),
+                    name = '')+xlab('')+ylab('')+
+  theme_text
+```
+
+
+### Años de casados
+
+En este segmento se muestra una gráfica del porcentaje de personas entrevistadas y los años de casados que tienen que con su pareja. Se puede visualizar que entre más pasan los años, el porcentaje de infidelidad aumenta. Hasta ahora, es un dato interesante ya que se puede encontrar un patrón. Al año de casados, las personas infieles representan 14%, sin embargo, a los 15 años, el porcentaje cambia a 30%
+
+
+```{r casados, echo =F, warning=F, message=F, fig.align='center', fig.width=8, fig.height=4}
+title.g3 <- 'Infidelidad según los años de casados'
+subtitle.g3 <- 'Porcentaje de personas que confesaron ser infiel según los años de casados'
+
+Affairs %>%
+  group_by(yearsmarried,affairs_f) %>%
+  summarise(personas = n()) %>%
+  mutate(yearsmarried=factor(round(yearsmarried)), 
+         porcentaje = round(personas / sum(personas),2)) %>%
+  ggplot(aes(x=yearsmarried, y = porcentaje, fill = affairs_f))+
+  geom_bar(stat='identity')+
+  geom_text(aes(label = paste0(porcentaje*100,'%')),color="white", 
+            size = 3, hjust = 0.5, vjust = 0.5, 
+            position = position_stack(vjust=0.5))+
+  scale_fill_manual(values=c(infiel,fiel),
+                    name = '')+xlab('')+ylab('')+
+    labs(title = title.g3, subtitle = subtitle.g3, caption = caption.g1)+
+  scale_y_continuous(labels=percent)+
+              theme_text
+
+```
+
+### Religión
+
+En esta situación, se muestra el porcentaje de personas entrevistadas y la puntuación que le dan a su relación con la religión. En esta situación, un valor de 1 significa que es poco comprometido y un valor de 5 que se encuentra comprometido. Se puede observar que entre más comprometida es la persona con la iglesia, parece reducir el porcentaje de infidelidad.
+
+
+
+```{r religion, echo =F, warning=F, message=F, fig.align='center', fig.width=8, fig.height=4}
+title.g3 <- '¿Las personas más comprometidas con la iglesia, son más fieles?'
+subtitle.g3 <- 'Porcentaje de personas que confesaron ser infiel según los años de casados'
+
+
+Affairs %>%
+  group_by(religiousness,affairs_f) %>%
+  summarise(personas = n()) %>%
+  mutate(religiousness=factor(round(religiousness)), 
+         porcentaje = round(personas / sum(personas),2)) %>%
+  ggplot(aes(x=religiousness, y = porcentaje, fill = affairs_f))+
+  geom_bar(stat='identity')+
+  geom_text(aes(label = paste0(porcentaje*100,'%')),color="white", 
+            size = 3, hjust = 0.5, vjust = 0.5, 
+            position = position_stack(vjust=0.5))+
+  scale_fill_manual(values=c(infiel,fiel),
+                    name = '')+xlab('')+ylab('')+
+    labs(title = title.g3, subtitle = subtitle.g3, caption = caption.g1)+
+  scale_y_continuous(labels=percent)+
+              theme_text
+
+```
+
+
+
+### Rating
+
+
+Finalmente, se describe la puntuación que la persona da a su relación, entendiendo que el número 1 es poco comprometido y 5 muy comprometido. Según esta escala, es claro que personas con poco compromiso cometen más infidelidades que personas muy comprometidas; la diferencia es de 50% contra 15%.
+
+
+
+```{r rating, echo =F, warning=F, message=F, fig.align='center', fig.width=8, fig.height=4}
+title.g3 <- '¿Las personas más comprometidas con la religión, son más fieles?'
+subtitle.g3 <- 'Porcentaje de personas que confesaron ser infiel según su compromiso con su relación'
+
+Affairs %>%
+  group_by(rating,affairs_f) %>%
+  summarise(personas = n()) %>%
+  mutate(rating=factor(round(rating)), 
+         porcentaje = round(personas / sum(personas),2)) %>%
+  ggplot(aes(x=rating, y = porcentaje, fill = affairs_f))+
+  geom_bar(stat='identity')+
+  geom_text(aes(label = paste0(porcentaje*100,'%')),color="white", 
+            size = 3, hjust = 0.5, vjust = 0.5, 
+            position = position_stack(vjust=0.5))+
+  scale_fill_manual(values=c(infiel,fiel),
+                    name = '')+xlab('')+ylab('')+
+  labs(title = title.g3, subtitle = subtitle.g3, caption = caption.g1)+
+  scale_y_continuous(labels=percent)+
+              theme_text
+
+```
+
+
+### Modelo
+
+Se utiliza una regresión logística para modelar los datos, en una primera instancia se ejecutan todas las variables independientes, sin embargo, no resultan ser significativas. En una segunda etapa se seleccionan únicamente la edad, religión, años de casados y rating, obteniendo variables significativas y que aportan información al modelo. 
+
+Los parámetros de la regresión, se pueden interpretar de la siguiente forma: 
+
+* A media que una persona se hace más vieja, la probabilidad de infidelidad se reduce en 3.5%
+* A medida que se cumple un año más de casado, la probabilidad de infidelidad aumenta en 10%
+* A medida que una persona es más comprometida con la iglesia, la probabilidad de infidelidad se reduce en 28%
+* A medida que una persona es menos feliz en su relación, la probabilidad de infidelidad aumenta en 36%
+
+
+Dados los datos anteriores, se hace un ejemplo con dos personas ficticias; Luis y Maria. 
+
+* Luis 
+  * Tiene 32 años
+  * Puntua su relación con la iglesia en 3
+  * Tiene 8 años de casado 
+  * Puntua su relación en un 2
+  
+* Maria 
+  * Tiene 43 años
+  * Puntua su relación con la iglesia en 1
+  * Tiene 18 años de casado 
+  * Puntua su relación en un 3
+
+```{r modelo, echo = F, results='asis'}
+
+newdata <- data.frame( age = c(32,43), religiousness = c(3,1),
+                       yearsmarried=c(8,18),rating=c(2,3),
+                       name = c('Luis','Maria'))
+
+newdata$prob <- predict(modelo, newdata=newdata[,-5], 
+                         type="response")
+
+newdata$prob <- paste0(round(newdata$prob,2)*100,'%')
+newdata %>%
+ kbl(caption = "Probabilidad de ser infiel según características") %>%
+  kable_styling()
+
+```
+
